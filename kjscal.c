@@ -18,6 +18,7 @@
 #include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/input.h>
+#include <linux/version.h>
 
 #include "version.h"
 
@@ -246,7 +247,22 @@ static struct input_handle *kjscal_connect(struct input_handler *handler, struct
 	kjsdev->handle.handler = handler;
 	kjsdev->handle.private = kjsdev;
 
-	/* Copy the input_dev struct to the virtual device */
+
+	/* 
+	 * WARNING: Black Magic ahead. This is a piece of code heavily
+	 * influenced by coder laziness and lack of sleep. Changes in the
+	 * kernel have broken it in the past and WILL break it again. Do
+	 * not reuse in any other code unless you wish a slow and painfull
+	 * death...
+	 *
+	 * This is definitely NOT the way to do this. The new input_device
+	 * struct fields should be duplicated and properly adjusted one at
+	 * a time, to avoid duplicating pointers to things that should not
+	 * be shared. As it is, this code is full of race conditions, bugs
+	 * waiting to happen and who knows what else. You have been warned...
+	 */
+
+	/* Copy the input_dev struct to the virtual device (Ouch!) */
 	memcpy(&(kjsdev->vdev), dev, sizeof(struct input_dev));
 
 	/* Alter the fields that should differ */
@@ -257,6 +273,11 @@ static struct input_handle *kjscal_connect(struct input_handler *handler, struct
 	kjsdev->vdev.open = NULL;
 	kjsdev->vdev.close = NULL;
 	kjsdev->vdev.dev = NULL;
+
+        /* Ugly fixes for an even uglier piece of sh^Wcode */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15)
+        kjsdev->vdev.cdev.kobj.k_name = NULL;
+#endif
 
 	/* Set the kjscal_dev arrays */
 	for (i = 0; i < ABS_MAX + 1; ++i) {
