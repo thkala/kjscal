@@ -1,3 +1,8 @@
+Mon May 12 02:31:39 EEST 2014 - Theodoros V. Kalamatianos <nyb@users.sourceforge.net>
+	* Release 0.1.5
+	* Added a proper deprecation notice and a mention of the evmapd
+	  userspace replacement.
+
 Fri Apr 28 15:03:17 EEST 2006 - Theodoros V. Kalamatianos <nyb@users.sourceforge.net>
 	* Release 0.1.4
 	* Added a big fat Black Magic warning in the code to notify potential

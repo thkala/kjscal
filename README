@@ -4,6 +4,7 @@ kjscal - A Linux kernel module that provides automatic joystick calibration
 
 Contents:
 
+    0. Deprecation notice
     1. Introduction
     2. Setup
 	2.1. Compilation
@@ -13,6 +14,13 @@ Contents:
     3. Internals
     4. License
     5. Authors
+
+
+
+0. Deprecation notice
+
+This project is not supported any more. The evmapd userspace daemon is a more
+flexible, reliable and clean solution.
 
 
 

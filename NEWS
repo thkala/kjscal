@@ -1,8 +1,3 @@
-0.1.4:
-	* Added a big fat Black Magic warning in the code to notify potential
-	  readers that things are not done as they should and that this code
-	  is just a hack and nothing more.
-	* Fixed an Oops with kernel versions >= 2.6.15. The fact that this bug
-	  was not reported, despite it being a real showstopper, probably means
-	  that kjscal is not very popular :-). Well, not everyone can have a
-	  killer project.
+0.1.5:
+	* Added a proper deprecation notice and a mention of the evmapd
+	  userspace replacement.
