@@ -1,0 +1,138 @@
+kjscal - A Linux kernel module that provides automatic joystick calibration
+
+
+* What is it ?
+
+kjscal is a simple Linux kernel module that is based on the Linux kernel 2.6
+input system. For each attached joystick, or joystick-like device, it creates
+a virtual joystick device with automatically calibrated axis. To achieve this,
+it uses the events it receives from the "real" joystick to determine what are
+the limits of its movement and then rescales the values it receives to provide
+full-scale movement for the software.
+
+
+
+* Why did you write it ?
+
+Because I have a very nice analog joystick attached to my laptop through an
+incredibly unreliable USB adaptor. For some reason I had to recalibrate the
+thing (with jscal) every time I rebooted the system or re-plugged it in, and
+every time jscal gave out very different calibration settings and printed a
+whole lot of warnings. This made it impossible to use a fixed jscal command
+to calibrate the joystick, like the one I am using on my desktop machine for
+the same joystick.
+
+In addition, this USB adaptor registers 6 axis and 8 buttons, with mixed-up
+event codes, while I only have 4 buttons and either 3 axis or 2 axis and a
+hat. I plan on creating a module that will automatically perform the proper
+conversions and allow the userspace programs to see my joystick as they should.
+The simple event translation performed by kjscal is a first step towards that
+goal.
+
+
+
+* Why not use jscal ?
+
+As I said, in my case the use of jscal was impractical and inefficient.
+
+
+
+* How does it work ?
+
+Basically it assumes the place of both an input event handler and an input
+device driver. For each joystick attached on the system, it will create a
+virtual device that will be regarded by the kernel and the userspace as a
+regular joystick - yep, joydev works just fine with this. In my case I have
+(using the joydev module) a /dev/js0 device and after loading kjscal I get
+a /dev/js1 device which gives out rescaled events resembling a properly
+calibrated joystick.
+
+After the device creation it passes through all events from the original
+device (/dev/js0) to the virtual one (/dev/js1), while performing linear
+rescaling on the values of the EV_ABS (i.e. the axis movement) events.
+
+For more details see the code :-)
+
+
+
+* How do I build it ?
+
+Issue:
+
+# make
+
+and then either copy the module by hand, or issue:
+
+# make install
+
+
+
+* This should be done differently...
+
+Feel free to tell me another way to do this, especially if it can use a more
+standard technique than this. kjscal was created in an afternoon (or night :-)
+including reading the input subsystem documentation and source code. Therefore
+it is currently little more than a hack. It works for me, but your mileage may
+vary.
+
+
+
+* I found a bug !
+
+Good! Now report it to me at <nyb@users.sourceforge.net>... or even better fix
+it and send a patch!
+
+
+
+* When will I see it in the vanilla kernel ?
+
+Whoa there! A bit ahead of ourselves, aren't we ?
+
+First of all this is an ALPHA release, which for all we know could burn your
+computer down or make your make your favorite team lose a match. It still needs
+a lot of testing.
+
+Second, its code quality is currently substandard, with lots of things going
+unchecked and lots of assumptions having been made on my part. A verification
+by the input system gurus out there would be nice.
+
+Third it still lacks some necessary features - yes, being able to actually select
+which joystick is a candidate for the rescaling process would be nice, although
+rescaling every single one of them is quite a solution :-)
+
+...and when all the above is done, kjscal may still be considered enough of a hack
+(or useless enough) to not be included in the kernel. In any case don't count on
+it happening any time soon.
+
+
+
+* I don't like your coding style
+
+Hmm, perhaps you are right, but right now I think this code needs more important
+things than a face lift :-|
+
+
+
+* How can I help ?
+
+- Test it ! Nothing can be done without extensive testing - although I dare say
+  that this one may need far less testing than, say, the Linux IDE driver :-)
+- Report bugs ! Even better, fix them and send the patches.
+- Ideas, suggestions e.t.c. are welcome. Patches even more :-D
+- Occasionally you may drop a line to say that it worked for you. Positive
+  feedback is just as important.
+
+
+
+* Who wrote it ?
+
+Me, Theodoros Kalamatianos, a student at the department of Electric and Computer
+Engineering of the National Technical University of Athens. For purposes relative
+to kjscal I may be reached at <nyb@users.sourceforge.net>.
+
+
+
+* Under what license is it released ?
+
+Naturally, the GNU General Public License. The full text of the GPL is included
+in the kjscal tarball. Read the top header of kjscal.c for more information.
