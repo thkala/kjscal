@@ -37,6 +37,16 @@ As I said, in my case the use of jscal was impractical and inefficient.
 
 
 
+* Does it work ?
+
+So far I have tested it with the following programs:
+
+- gxtest (a simple joystick test probram I found somewhere on the net)
+- evtest
+- dosbox :-)
+
+
+
 * How does it work ?
 
 Basically it assumes the place of both an input event handler and an input
@@ -106,13 +116,6 @@ it happening any time soon.
 
 
 
-* I don't like your coding style
-
-Hmm, perhaps you are right, but right now I think this code needs more important
-things than a face lift :-|
-
-
-
 * How can I help ?
 
 - Test it ! Nothing can be done without extensive testing - although I dare say
@@ -121,6 +124,19 @@ things than a face lift :-|
 - Ideas, suggestions e.t.c. are welcome. Patches even more :-D
 - Occasionally you may drop a line to say that it worked for you. Positive
   feedback is just as important.
+
+
+
+* My joystick driver does have automatic calibration
+
+Mine hasn't...
+
+
+
+* I don't like your coding style
+
+Hmm, perhaps you are right, but right now I think this code needs more important
+things than a face lift :-|
 
 
 

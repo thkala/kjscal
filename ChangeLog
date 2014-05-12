@@ -1,3 +1,11 @@
 Mon Aug  8 00:12:44 EEST 2005 - Theodoros V. Kalamatianos <nyb@users.sourceforge.net>
 	* Initial public release (0.1.0)
 
+Mon Aug  8 10:16:04 EEST 2005 - Theodoros V. Kalamatianos <nyb@users.sourceforge.net>
+	* Release 0.1.1
+	* Check the return value of input_open_device()
+	* Make verbose default to 1 on debug builds
+	* Added some more debugging stuff
+	* Added `static' to several declarations
+	* Added a few lines to the README - it's almost as big as kjscal.c :-)
+

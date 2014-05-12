@@ -1,3 +1,5 @@
+* Find out whether the linear scaling performed here is the Right Thing(TM)
+
 * Allow the user to select which joysticks should be used. A module option
   would be a good start. A /proc entry is probably the best alternative:
   e.g. 

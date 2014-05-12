@@ -32,8 +32,13 @@ MODULE_LICENSE("GPL");
 
 
 
+#if DEBUG
+static int verbose = 1;
+module_param_named(verbose, verbose, int, 1);
+#else
 static int verbose = 0;
 module_param_named(verbose, verbose, int, 0);
+#endif
 MODULE_PARM_DESC(verbose, "Verbosity level (0 / 1)");
 
 
@@ -43,7 +48,7 @@ MODULE_PARM_DESC(verbose, "Verbosity level (0 / 1)");
 
 
 
-const char *name = "kjscal";
+static const char *name = "kjscal";
 
 
 
@@ -66,7 +71,7 @@ typedef struct _kjscal_dev {
 
 
 /* The device slot table */
-struct input_handle *kjscal_devs[MAX_DEV];
+static struct input_handle *kjscal_devs[MAX_DEV];
 
 
 
@@ -104,7 +109,7 @@ static void kjscal_event(struct input_handle *handle, unsigned int type, unsigne
 
 static struct input_handle *kjscal_connect(struct input_handler *handler, struct input_dev *dev, struct input_device_id *id)
 {
-	int slot;
+	int ret, slot;
 	kjscal_dev *kjsdev;
 
 	/* Avoid registering virtual devices */
@@ -118,7 +123,7 @@ static struct input_handle *kjscal_connect(struct input_handler *handler, struct
 	for (slot = 0; slot < MAX_DEV; ++slot)
 		if (kjscal_devs[slot] == NULL) break;
 	if (slot >= MAX_DEV) {
-		printk(KERN_ERR "Could not allocate an empty kjscal slot for %s (%s)\n", dev->name, dev->phys);
+		printk(KERN_ERR "kjscal: Could not allocate an empty slot for %s (%s)\n", dev->name, dev->phys);
 		return NULL;
 	}
 
@@ -162,7 +167,20 @@ static struct input_handle *kjscal_connect(struct input_handler *handler, struct
 	printk("kjscal%i: virtual input device for %s (%s) registered\n", slot, dev->name, dev->phys);
 #endif
 
-	input_open_device(&(kjsdev->handle));
+	ret = input_open_device(&(kjsdev->handle));
+	if (ret != 0) {
+		printk(KERN_ERR "kjscal%i: Could not open device %s (%s)\n", slot, dev->name, dev->phys);
+
+		/* Return to a sane state */
+    		input_unregister_device(&(kjsdev->vdev));
+		kjscal_devs[kjsdev->slot] = NULL;
+		kfree(kjsdev);
+
+		return NULL;
+	}
+#if DEBUG
+	printk("kjscal%i: input device %s (%s) opened successfully\n", slot, dev->name, dev->phys);
+#endif
 
 	if (verbose)
 		printk("%s: activated for %s (%s)\n", kjsdev->hname, dev->name, dev->phys);
