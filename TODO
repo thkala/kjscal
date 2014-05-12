@@ -6,11 +6,11 @@
 
     echo "usb-0000:00:1d.7-3.3/input0" > /proc/kjscal/enable
     
-  could enable kjscal for the joystick with dev.phys == "usb-0000:00:1d.7-3.3/input0"
+  could enable kjscal for the (real) joystick with
+
+    dev.phys == "usb-0000:00:1d.7-3.3/input0"
 
 * A /proc entry with information such as the current rmin/rmax values for
   each axis e.t.c.
 
-* Full-blown joystick event remapping (e.g. swap axis 3 and 4). This should be
-  in another module - after all the "kjscal" name pretty much sets the scope of
-  this one, but suggestions are welcome.
+* Provide sample udev/hotplug scripts to manage virtual joysticks

@@ -1,154 +1,186 @@
 kjscal - A Linux kernel module that provides automatic joystick calibration
 
 
-* What is it ?
 
-kjscal is a simple Linux kernel module that is based on the Linux kernel 2.6
-input system. For each attached joystick, or joystick-like device, it creates
-a virtual joystick device with automatically calibrated axis. To achieve this,
-it uses the events it receives from the "real" joystick to determine what are
-the limits of its movement and then rescales the values it receives to provide
+Contents:
+
+    1. Introduction
+    2. Setup
+	2.1. Compilation
+	2.2. Installation
+	2.3. Use
+	    2.3.1. Module options
+    3. Internals
+    4. License
+    5. Authors
+
+
+
+1. Introduction
+
+kjscal is a simple Linux kernel module that is based on the Linux kernel 2.6 
+input system. For each attached joystick, or joystick-like device, it creates a 
+virtual joystick device with automatically calibrated axis. To achieve this, it 
+uses the events it receives from the "real" joystick to determine what are the 
+limits of its movement and then rescales the values it receives to provide 
 full-scale movement for the software.
 
-
-
-* Why did you write it ?
-
-Because I have a very nice analog joystick attached to my laptop through an
-incredibly unreliable USB adaptor. For some reason I had to recalibrate the
-thing (with jscal) every time I rebooted the system or re-plugged it in, and
-every time jscal gave out very different calibration settings and printed a
-whole lot of warnings. This made it impossible to use a fixed jscal command
-to calibrate the joystick, like the one I am using on my desktop machine for
-the same joystick.
-
-In addition, this USB adaptor registers 6 axis and 8 buttons, with mixed-up
-event codes, while I only have 4 buttons and either 3 axis or 2 axis and a
-hat. I plan on creating a module that will automatically perform the proper
-conversions and allow the userspace programs to see my joystick as they should.
-The simple event translation performed by kjscal is a first step towards that
-goal.
+Since it supports runtime recalibration, it can be used with unstable devices 
+for which a fixed jscal command (e.g. in the boot/hotplug scripts) is just not 
+sufficient.
 
 
 
-* Why not use jscal ?
+2. Setup
 
-As I said, in my case the use of jscal was impractical and inefficient.
+2.1. Compilation
 
-
-
-* Does it work ?
-
-So far I have tested it with the following programs:
-
-- gxtest (a simple joystick test probram I found somewhere on the net)
-- evtest
-- dosbox :-)
-
-
-
-* How does it work ?
-
-Basically it assumes the place of both an input event handler and an input
-device driver. For each joystick attached on the system, it will create a
-virtual device that will be regarded by the kernel and the userspace as a
-regular joystick - yep, joydev works just fine with this. In my case I have
-(using the joydev module) a /dev/js0 device and after loading kjscal I get
-a /dev/js1 device which gives out rescaled events resembling a properly
-calibrated joystick.
-
-After the device creation it passes through all events from the original
-device (/dev/js0) to the virtual one (/dev/js1), while performing linear
-rescaling on the values of the EV_ABS (i.e. the axis movement) events.
-
-For more details see the code :-)
-
-
-
-* How do I build it ?
-
-Issue:
+To compile kjscal you need the configured sources of your kernel. In most cases 
+the build process will detect them automatically and a simple call to `make' is 
+all you need:
 
 # make
 
-and then either copy the module by hand, or issue:
+If your kernel source tree was not detected, you have to set the KDIR Makefile 
+variable. To build for a different kernel version you can set the KVER variable 
+to your target kernel version. Note that write access to your kernel source tree 
+may be needed to complete the compilation.
+
+To turn on additional debugging code you have to set DEBUG to 1 in the kjscal.c 
+file and recompile kjscal. Note that this produces quite a bit of syslog output 
+so it is not recommended for normal builds.
+
+
+
+2.2. Installation
+
+The Makefile installs the kjscal module to the misc/ subdirectory of the default 
+kernel modules directory, i.e. to:
+
+/lib/modules/$(KVER)/misc
+
+To change this you may specify the IDIR Makefile variable. Then give
 
 # make install
 
+as root to install the kernel module.
+
+Of course you can always copy the module by hand, but don't forget to run depmod 
+afterwards.
 
 
-* This should be done differently...
+2.3. Use
 
-Feel free to tell me another way to do this, especially if it can use a more
-standard technique than this. kjscal was created in an afternoon (or night :-)
-including reading the input subsystem documentation and source code. Therefore
-it is currently little more than a hack. It works for me, but your mileage may
-vary.
+To use kjscal, you have to load it on your running kernel. This can be done by 
+typing (as root):
 
+# modprobe kjscal
 
+To have it automatically loaded on boot, you can insert the above command in 
+your boot scripts. In some systems there is a file somewhere in /etc where the 
+administrator can specify modules to be loaded on boot. Unfortunately there is 
+no standard way to do this yet.
 
-* I found a bug !
+If you wish to use any module options for kjscal, you will probably have to edit 
+your /etc/modprobe.conf file to avoid specifying them in the modprobe command 
+line. See the modprobe.conf(5) manual page to see how to do this.
 
-Good! Now report it to me at <nyb@users.sourceforge.net>... or even better fix
-it and send a patch!
+As soon as it is loaded, kjscal will dynamically attach to any joystick that is 
+connected to the system. It will also detect any new joysticks at the moment 
+they are plugged in and detach from unplugged devices. For every joystick it 
+will create a new virtual joystick device with exactly the same features as the 
+real one. The only difference is that the virtul joystick will have the events 
+on each axis processed and normalised to the full value range.
 
-
-
-* When will I see it in the vanilla kernel ?
-
-Whoa there! A bit ahead of ourselves, aren't we ?
-
-First of all this is an ALPHA release, which for all we know could burn your
-computer down or make your make your favorite team lose a match. It still needs
-a lot of testing.
-
-Second, its code quality is currently substandard, with lots of things going
-unchecked and lots of assumptions having been made on my part. A verification
-by the input system gurus out there would be nice.
-
-Third it still lacks some necessary features - yes, being able to actually select
-which joystick is a candidate for the rescaling process would be nice, although
-rescaling every single one of them is quite a solution :-)
-
-...and when all the above is done, kjscal may still be considered enough of a hack
-(or useless enough) to not be included in the kernel. In any case don't count on
-it happening any time soon.
+If you use the joydev/evdev interfaces (which you probably do use) you will 
+probably have to look at /proc/bus/input/devices to find out which device is the 
+virtual joystick and what device nodes it uses. If you have multiple joysticks 
+then there is probably no other way to determine this information. In most Linux 
+systems it is possible to create a hotplug/udev script which will automatically 
+create symlinks (e.g. /dev/vjs0 -> /dev/js1) to make the use of the virtual 
+joysticks easier.
 
 
+2.3.1. Module options
 
-* How can I help ?
+The following options can be used to tune kjscal's operation:
 
-- Test it ! Nothing can be done without extensive testing - although I dare say
-  that this one may need far less testing than, say, the Linux IDE driver :-)
-- Report bugs ! Even better, fix them and send the patches.
-- Ideas, suggestions e.t.c. are welcome. Patches even more :-D
-- Occasionally you may drop a line to say that it worked for you. Positive
-  feedback is just as important.
+- verbose=N		(positive integer)
+
+    This sets the verbosity level of the kjscal code. Higher values result in 
+    more output to the system logs. It defaults to 1 in debug builds.
+
+- ignore=N		(positive integer)
+
+    This instructs kjscal to completely ignore the first N events on each axis. 
+    It may be useful with devices that give out random values when plugged-in. 
+    The ignored events are not passed to the virtual device. The number of 
+    events to ignore will have to be determined with some experimentation, since 
+    each device produces events at different rates. Use this option only when 
+    necessary.
+
+- recal=N		(positive integer)
+
+    This enables the kjscal recalibration code, which causes kjscal to only use 
+    the last N events to determine the actual device range. Note that the 
+    recalibration process happens every N events, and not continuously. This 
+    option can be used with devices whose values drift through time causing the 
+    initial calculated range to become outdated. Note that smaller N values will 
+    case more frequent recalibration, but they may also result in kjscal not 
+    having the correct actual range of the device. Larger values are probably 
+    safer in this regard, but they may leave kjscal vulnerable to any drift 
+    effects of the hardware. Trial and error is probably the only way to 
+    determine a value for this option. Use this option only when necessary.
+
+- minrange=N		(positive integer)
+
+    This instructs kjscal to require at least 1/minrange coverage of the 
+    device's reported range to perform any normalisation and recalibration
+    operations. This means that it will wait until the actual (received) range 
+    is at least 1/minrange of the reported device range before performing value 
+    normalisation. It will also delay the recalibration (when the recal option 
+    is used) if the new range does not satisfy this condition. The most common 
+    use of this option would be with joysticks that jump around values even when 
+    idle, which could cause the normalised values to jump all over the reported 
+    range and the recalibration routines to regularly reset the received range 
+    to incorrect values. Note that specifying minrange=1 is probably not useful,
+    since it would require the actual range of the joystick to be equal to its 
+    reported one, which suggests a perfectly calibrated piece of hardware.
 
 
 
-* My joystick driver does have automatic calibration
+3. Internals
 
-Mine hasn't...
+In short, kjscal assumes the place of both an input event handler and an input 
+device driver. Then, for each joystick attached on the system, it will create a 
+corresponding virtual device that will be regarded by both the kernel and the 
+userspace as a regular joystick. All input events, apart from axis (ABS) ones, 
+are passed through to the virtual device without change. The values of the ABS 
+events, though, are used to compute the actual range of the joystick and are 
+afterwards altered to cover its full reported range. In most cases the result 
+will resemble a properly calibrated joystick.
+
+Currently a one-piece linear algorith is used to calculate the replacement 
+values:
+
+	    (report_max - report_min) * (old_value - receive_min)
+new_value = ----------------------------------------------------- + report_min
+			 (receive_max - receive_min)
+
+For more details you can always read the kjscal source code, but you need some 
+knowledge on the Linux input system to understand what happens in some parts.
 
 
 
-* I don't like your coding style
+4. License
 
-Hmm, perhaps you are right, but right now I think this code needs more important
-things than a face lift :-|
-
-
-
-* Who wrote it ?
-
-Me, Theodoros Kalamatianos, a student at the department of Electric and Computer
-Engineering of the National Technical University of Athens. For purposes relative
-to kjscal I may be reached at <nyb@users.sourceforge.net>.
+kjscal is released under the GNU General Public License version 2. The full text 
+of the GPL is in the COPYING file that should be included in the kjscal 
+distribution.
 
 
 
-* Under what license is it released ?
+5. Authors
 
-Naturally, the GNU General Public License. The full text of the GPL is included
-in the kjscal tarball. Read the top header of kjscal.c for more information.
+Original author:
+    Theodoros V. Kalamatianos <nyb@users.sourceforge.net>

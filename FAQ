@@ -1,0 +1,140 @@
+* Why the need for kjscal ?
+
+Because I have a very nice analog joystick attached to my laptop through an 
+incredibly unreliable and unstable USB adaptor. For some obscure reason I had to 
+recalibrate the thing with jscal every time I rebooted the system or plugged it 
+in, and every time jscal gave out very different calibration settings and 
+printed a whole lot of warnings. This made it impossible to use a fixed jscal 
+command to calibrate the joystick, like the one I am using on my desktop machine 
+for the same joystick.
+
+In addition, this device had a strange value drift effect, with e.g. the X axis 
+values starting in the 30-220 range and ending in the 50-130 range after 10 
+minutes. kjscal can now compensate for this with the recalibration routines.
+
+
+
+* My joystick driver does have automatic calibration
+
+Mine hasn't...
+
+If I remember correctly only the analog joystick driver supports automatic 
+calibration, which admittedly gives far better results than kjscal could ever 
+produce, due to its proximity with the hardware. But people with other devices, 
+such as USB joysticks, are out of luck...
+
+
+
+* Why not just use jscal ?
+
+As said, in my case the use of jscal was impractical and inefficient, since it 
+requires some relative hardware stability and calibrating manually every 5 
+minutes is not an option. Also bear in mind that jscal is only usable with the 
+joydev interface, although I have yet to find an application that uses a 
+joystick through a different interface.
+
+Note, however, that jscal is perfectly usable with the kjscal virtual joysticks, 
+if you have to use it. For example you could use jscal to correct the axis 
+center positions, since kjscal has no notion of axis centers yet - it sees each 
+axis as a single linear range.
+
+
+
+* Does it work ?
+
+So far I have tested kjscal with the following programs:
+
+- gxtest (a simple joystick test probram I found somewhere on the net)
+- evtest
+- dosbox :-)
+
+
+
+* How does it work ?
+
+Read the Internals section in the README, then the source code itself. Note that 
+some understanding of the Linux input layer may be necessary to fully comprehend 
+what happens in the source code.
+
+
+
+* This should be done differently...
+
+Feel free to tell me another way to do this, especially if it can use a more 
+standard technique than this. kjscal was created in an afternoon (or night :-) 
+including reading the input subsystem documentation and source code. Therefore 
+it is currently little more than a hack. It works for me, but your mileage may 
+vary.
+
+
+
+* I don't like your coding style
+
+And I don't like yours...
+
+In any case, you may be right, but currently this code needs more important 
+things than a face lift :-|
+
+Of course there are always utilities, such as indent, if you need to change my
+coding style for some reason.
+
+
+
+* I found a bug !
+
+Good! Now report it at <nyb@users.sourceforge.net>... or even better fix it and 
+send a patch!
+
+
+
+* When will I see it in the vanilla kernel ?
+
+Whoa there! A bit ahead of ourselves, aren't we ?
+
+First of all this is an ALPHA release, which for all we know could burn your 
+computer down or make your favorite team lose a match. It still needs a lot of 
+testing. Some feedback by the input system gurus out there would be nice.
+
+Second it still lacks some necessary features - yes, being able to actually 
+select which joystick is a candidate for the rescaling process would be nice, 
+although rescaling all axis of every single one of them is quite a solution :-)
+
+...and when all the above is done, kjscal may still be considered useless or 
+enough of a hack to not be included in the kernel. In any case don't count on it 
+happening any time soon.
+
+
+
+* How can I help ?
+
+- Test it ! Nothing can be done without extensive testing - although I dare say
+  that this one may need far less testing than, say, the Linux IDE driver :-)
+- Report bugs ! Even better, fix them and send the patches.
+- Ideas, suggestions e.t.c. are welcome. Patches even more :-D
+- Occasionally you may drop a line to say that it worked for you. Positive
+  feedback is just as important.
+
+
+
+* Any plans for the future ?
+
+Find a job, marry, have 2.31 kids... Seriously now, I plan on creating a module 
+that will perform, apart from calibration, axis and button remapping, thus 
+providing a solution for those joysticks that have their axis/buttons mixed up. 
+The simple event translation performed by kjscal is a first step towards that 
+goal.
+
+
+
+* Who wrote it ?
+
+Me, Theodoros Kalamatianos, a student at the department of Electric and Computer 
+Engineering of the National Technical University of Athens. For purposes related 
+to kjscal I may be reached at <nyb@users.sourceforge.net>.
+
+
+
+* Under what license is it released ?
+
+Naturally, the GNU General Public License. The full text of the GPL is included 
+in the kjscal tarball.

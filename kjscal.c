@@ -1,9 +1,6 @@
 /*
  * kjscal - A module that provides automatic joystick calibration
  *
- * This module creates for each joystick a virtual joystick with
- * automatic axis calibration.
- *
  * Copyright (c) 2005 Theodoros V. Kalamatianos <nyb@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,12 +10,18 @@
 
 
 
-//#define VERSION "0.1.0"
-#define DEBUG 1
+#define DEBUG 0
 
 
 
 #include <linux/module.h>
+#include <linux/slab.h>
+#include <linux/init.h>
+#include <linux/input.h>
+
+#include "version.h"
+
+
 
 MODULE_AUTHOR("Theodoros V. Kalamatianos <nyb@users.sourceforge.net>");
 MODULE_DESCRIPTION("A module that provides automatic joystick calibration (Version " VERSION ")");
@@ -26,20 +29,29 @@ MODULE_LICENSE("GPL");
 
 
 
-#include <linux/slab.h>
-#include <linux/init.h>
-#include <linux/input.h>
-
-
-
+/* Verbosity level */
 #if DEBUG
 static int verbose = 1;
-module_param_named(verbose, verbose, int, 1);
 #else
 static int verbose = 0;
-module_param_named(verbose, verbose, int, 0);
 #endif
-MODULE_PARM_DESC(verbose, "Verbosity level (0 / 1)");
+module_param_named(verbose, verbose, int, 000);
+MODULE_PARM_DESC(verbose, "Verbosity level (0-1)");
+
+/* Initial per-axis events to ignore */
+static int ignore = 0;
+module_param_named(ignore, ignore, int, 000);
+MODULE_PARM_DESC(ignore, "Initial per-axis events to ignore");
+
+/* Per-axis recalibration interval */
+static int recal = 0;
+module_param_named(recal, recal, int, 000);
+MODULE_PARM_DESC(recal, "Per-axis recalibration interval");
+
+/* Require at least 1/minrange coverage of absolute range to normalise */
+static int minrange = 0;
+module_param_named(minrange, minrange, int, 000);
+MODULE_PARM_DESC(minrange, "Require at least 1/minrange coverage of absolute range to normalise");
 
 
 
@@ -63,9 +75,14 @@ typedef struct _kjscal_dev {
 
     struct input_dev vdev;	/* The virtual output device */
 
-    int rset[ABS_MAX + 1];	/* Setup complete flag per axis */
-    int rmin[ABS_MAX + 1];	/* Minimum received value per axis */
-    int rmax[ABS_MAX + 1];	/* Maximum received value per axis */
+    int ignr[ABS_MAX + 1];	/* Ignore events per axis down-counter */
+    int rset[ABS_MAX + 1];	/* Setup complete per axis flag */
+    int rmin[ABS_MAX + 1];	/* Minimum received per axis value */
+    int rmax[ABS_MAX + 1];	/* Maximum received per axis value */
+
+    int rccnt[ABS_MAX + 1];	/* Recalibration per axis down counter */
+    int rcmin[ABS_MAX + 1];	/* Recalibration minimum received per axis value */
+    int rcmax[ABS_MAX + 1];	/* Recalibration maximum received per axis value */
 } kjscal_dev;
 
 
@@ -81,26 +98,79 @@ static void kjscal_event(struct input_handle *handle, unsigned int type, unsigne
 
 	/* Event translation */
 	if (type == EV_ABS) {
-	    if (!kjsdev->rset[code]) {
-		if (kjsdev->rmin[code] == 0) {
-		    kjsdev->rmin[code] = value;
+		if (!kjsdev->rset[code]) {
+			/* Ignore initial events */
+			if (kjsdev->ignr[code] > 0) {
+				--(kjsdev->ignr[code]);
+				return;
+			}
+
+			if (kjsdev->rmin[code] == 0) {
+				kjsdev->rmin[code] = value;
+			} else {
+				if (kjsdev->rmin[code] < value) {
+					kjsdev->rmax[code] = value;
+					kjsdev->rset[code] = 1;
+				} else if (kjsdev->rmin[code] > value) {
+					kjsdev->rmax[code] = kjsdev->rmin[code];
+					kjsdev->rmin[code] = value;
+					kjsdev->rset[code] = 1;
+				}
+			}
 		} else {
-		    if (kjsdev->rmin[code] < value) {
-			kjsdev->rmax[code] = value;
-			kjsdev->rset[code] = 1;
-		    } else if (kjsdev->rmin[code] > value) {
-			kjsdev->rmax[code] = kjsdev->rmin[code];
-			kjsdev->rmin[code] = value;
-			kjsdev->rset[code] = 1;
-		    }
+			/* The absolute value range */
+			int absrange = kjsdev->vdev.absmax[code] - kjsdev->vdev.absmin[code];
+
+			/* Recalibration support */
+			if (recal > 0) {
+				if (kjsdev->rccnt[code] <= recal) {
+					--(kjsdev->rccnt[code]);
+
+					if (value < kjsdev->rcmin[code])
+						kjsdev->rcmin[code] = value;
+					if (value > kjsdev->rcmax[code])
+						kjsdev->rcmax[code] = value;
+
+					/* Recalibrate! */
+					if (kjsdev->rccnt[code] <= 0) {
+						if ((minrange == 0) || ((long)(kjsdev->rcmax[code] - kjsdev->rcmin[code]) * (long)minrange >= (long)absrange)) {
+#if DEBUG
+							printk("kjscal%i: Recalibration for axis %i: %i -  %i\n", kjsdev->slot, code, kjsdev->rmin[code], kjsdev->rmax[code]);
+#endif
+							kjsdev->rmin[code] = kjsdev->rcmin[code];
+							kjsdev->rmax[code] = kjsdev->rcmax[code];
+							kjsdev->rccnt[code] = recal + 1;
+							kjsdev->rcmin[code] = 0;
+							kjsdev->rcmax[code] = 0;
+						} else {
+							kjsdev->rccnt[code] = 1;
+						}
+					}
+				} else {
+					if (kjsdev->rcmin[code] == 0) {
+						kjsdev->rcmin[code] = value;
+					} else {
+						if (kjsdev->rcmin[code] < value) {
+							kjsdev->rcmax[code] = value;
+							kjsdev->rccnt[code] = recal;
+						} else if (kjsdev->rcmin[code] > value) {
+							kjsdev->rcmax[code] = kjsdev->rcmin[code];
+							kjsdev->rcmin[code] = value;
+							kjsdev->rccnt[code] = recal;
+						}
+					}
+				}
+			}
+
+			if (value < kjsdev->rmin[code])
+				kjsdev->rmin[code] = value;
+			if (value > kjsdev->rmax[code])
+				kjsdev->rmax[code] = value;
+
+			/* Recalibrate if possible */
+			if ((minrange == 0) || ((long)(kjsdev->rmax[code] - kjsdev->rmin[code]) * (long)minrange >= (long)absrange))
+				value = ((absrange * (value - kjsdev->rmin[code])) / (kjsdev->rmax[code] - kjsdev->rmin[code])) + kjsdev->vdev.absmin[code];
 		}
-	    } else {
-		if (value < kjsdev->rmin[code])
-		    kjsdev->rmin[code] = value;
-		if (value > kjsdev->rmax[code])
-		    kjsdev->rmax[code] = value;
-		value = ((((kjsdev->vdev.absmax[code]) - (kjsdev->vdev.absmin[code])) * (value - kjsdev->rmin[code])) / (kjsdev->rmax[code] - kjsdev->rmin[code])) + kjsdev->vdev.absmin[code];
-	    }
 	}
 
 	input_event(&(kjsdev->vdev), type, code, value);
@@ -109,12 +179,12 @@ static void kjscal_event(struct input_handle *handle, unsigned int type, unsigne
 
 static struct input_handle *kjscal_connect(struct input_handler *handler, struct input_dev *dev, struct input_device_id *id)
 {
-	int ret, slot;
+	int i, ret, slot;
 	kjscal_dev *kjsdev;
 
 	/* Avoid registering virtual devices */
 	if (memcmp(dev->phys, VDIR, strlen(VDIR)) == 0) {
-		if (verbose)
+		if (verbose > 0)
 			printk("kjscal: ignoring device %s (%s)\n", dev->name, dev->phys);
 		return NULL;
 	}
@@ -162,6 +232,13 @@ static struct input_handle *kjscal_connect(struct input_handler *handler, struct
 	kjsdev->vdev.close = NULL;
 	kjsdev->vdev.dev = NULL;
 
+	/* Set the kjscal_dev arrays */
+	for (i = 0; i < ABS_MAX + 1; ++i) {
+		kjsdev->ignr[i] = ignore;
+		kjsdev->rccnt[i] = recal + 1;
+	}
+
+	/* Register the virtual device */
 	input_register_device(&(kjsdev->vdev));
 #if DEBUG
 	printk("kjscal%i: virtual input device for %s (%s) registered\n", slot, dev->name, dev->phys);
@@ -182,7 +259,7 @@ static struct input_handle *kjscal_connect(struct input_handler *handler, struct
 	printk("kjscal%i: input device %s (%s) opened successfully\n", slot, dev->name, dev->phys);
 #endif
 
-	if (verbose)
+	if (verbose > 0)
 		printk("%s: activated for %s (%s)\n", kjsdev->hname, dev->name, dev->phys);
 
 	return &(kjsdev->handle);
@@ -198,7 +275,7 @@ static void kjscal_disconnect(struct input_handle *handle)
 	input_unregister_device(&(kjsdev->vdev));
 
 	kjscal_devs[kjsdev->slot] = NULL;
-	if (verbose)
+	if (verbose > 0)
 		printk("%s: deactivated for %s (%s)\n", kjsdev->hname, handle->dev->name, handle->dev->phys);
 
 	kfree(handle->private);
@@ -258,7 +335,19 @@ static int __init kjscal_init(void)
 
 	input_register_handler(&kjscal_handler);
 
-	if (verbose)
+	/* module parameter safeguards */
+	if (verbose < 0)
+		verbose = 0;
+	if (ignore < 0)
+		ignore = 0;
+	if (recal < 0)
+		recal = 0;
+	if (recal > (INT_MAX - 1))
+		recal = INT_MAX - 1;
+	if (minrange < 0)
+		minrange = 0;
+
+	if (verbose > 0)
 		printk("kjscal: Verbose logging enabled\n");
 
 	return 0;

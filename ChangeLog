@@ -1,5 +1,12 @@
-Mon Aug  8 00:12:44 EEST 2005 - Theodoros V. Kalamatianos <nyb@users.sourceforge.net>
-	* Initial public release (0.1.0)
+Sat Aug 20 00:20:54 EEST 2005 - Theodoros V. Kalamatianos <nyb@users.sourceforge.net>
+	* Release 0.1.2
+	* Major documentation changes
+	* Added the minrange= module option
+	* Added recalibration (recal=) support
+	* Added the ignore= module option
+	* fixed module_param_named nonsense (no RTFM, no sense...)
+	* Dump VERSION in favour of version.h
+	* Disable compiling a debug build by default
 
 Mon Aug  8 10:16:04 EEST 2005 - Theodoros V. Kalamatianos <nyb@users.sourceforge.net>
 	* Release 0.1.1
@@ -8,4 +15,7 @@ Mon Aug  8 10:16:04 EEST 2005 - Theodoros V. Kalamatianos <nyb@users.sourceforge
 	* Added some more debugging stuff
 	* Added `static' to several declarations
 	* Added a few lines to the README - it's almost as big as kjscal.c :-)
+
+Mon Aug  8 00:12:44 EEST 2005 - Theodoros V. Kalamatianos <nyb@users.sourceforge.net>
+	* Initial public release (0.1.0)
 

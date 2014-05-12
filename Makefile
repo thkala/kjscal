@@ -1,9 +1,6 @@
 #
 # kjscal - A module that provides automatic joystick calibration
 #
-# This module creates for each joystick a virtual joystick with
-# automatic axis calibration.
-#
 # Copyright (c) 2005 Theodoros V. Kalamatianos <nyb@users.sourceforge.net>
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -23,17 +20,18 @@ KVER := $(shell uname -r)
 KDIR := /lib/modules/$(KVER)/build
 IDIR := /lib/modules/$(KVER)/misc
 PWD  := $(shell pwd)
-VERSION := $(shell cat VERSION)
 
 
 default:
-	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) EXTRA_CFLAGS=-DVERSION=\\\"$(VERSION)\\\" modules
+	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
 endif
+
+kjscal.c: version.h
+
+$(MODULE).ko: default
 
 clean:
 	rm -rf *.o .*.o.cmd .*.ko.cmd .tmp* *.mod.c *.ko
-
-$(MODULE).ko: default
 
 install: $(MODULE).ko
 	install -m644 -D $(MODULE).ko $(IDIR)/$(MODULE).ko
