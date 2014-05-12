@@ -1,8 +1,3 @@
-0.1.2:
-	* Major documentation changes
-	* Added the minrange= module option
-	* Added recalibration (recal=) support
-	* Added the ignore= module option
-	* fixed module_param_named nonsense (no RTFM, no sense...)
-	* Dump VERSION in favour of version.h
-	* Disable compiling a debug build by default
+0.1.3:
+	* Documentation updates
+	* Added the noskip and skiprange options

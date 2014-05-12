@@ -147,6 +147,26 @@ The following options can be used to tune kjscal's operation:
     since it would require the actual range of the joystick to be equal to its 
     reported one, which suggests a perfectly calibrated piece of hardware.
 
+- noskip=N		(positive integer)
+
+    This instructs kjscal to ignore events that differ from the last received
+    value more than 1/noskip of the reported device range. It can be used to
+    compensate partly for devices that every once in a while give out random
+    values, confusing the calibration algorithms. Values around 10 or 12 should
+    probably be enough, but your mileage may vary. noskip=1 is a no-op, unless
+    your joystick returns events outside its reported range - there certainly
+    is enough brain-damaged hardware out there. Note that noskip is applied
+    only on axis with absolute range greater than skiprange (see below). Use
+    this option only when necessary.
+
+- skiprange=N		(positive integer)
+
+    This option sets the maximum axis absolute range for which noskip will not
+    be applied. It defaults to 2 to keep noskip from killing any hats on the
+    joystick - hat axis move from -1 to 0 to +1, a 50% range movement that would
+    normally trigger the noskip code. Please inform the kjscal author if you
+    have to change this default for any reason.
+
 
 
 3. Internals

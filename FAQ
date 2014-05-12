@@ -40,6 +40,18 @@ axis as a single linear range.
 
 
 
+* My joystick doesn't drift and doesn't skip. It is extremely precise, it
+  slices, it dices and...
+
+Well, that's probably because it was made by humans. My USB adaptor[*] has been
+made in Monkey Land, which is probably quite a feat by itself, what with the
+monkeys having to learn the USB specifications and all.
+
+[*]: Yes, the joystick itself worked just fine on a normal gameport last time
+     I tested it.
+
+
+
 * Does it work ?
 
 So far I have tested kjscal with the following programs:

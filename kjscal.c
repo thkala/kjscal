@@ -53,6 +53,16 @@ static int minrange = 0;
 module_param_named(minrange, minrange, int, 000);
 MODULE_PARM_DESC(minrange, "Require at least 1/minrange coverage of absolute range to normalise");
 
+/* Ignore axis changes over 1/noskip of the absolute range */
+static int noskip = 0;
+module_param_named(noskip, noskip, int, 000);
+MODULE_PARM_DESC(noskip, "Ignore axis changes over 1/noskip of the absolute range");
+
+/* Apply noskip only for axis with absolute range greater than skiprange */
+static int skiprange = 2;
+module_param_named(skiprange, skiprange, int, 000);
+MODULE_PARM_DESC(skiprange, "Apply noskip only for axis with absolute range greater than skiprange");
+
 
 
 #define MAX_DEV	32
@@ -83,6 +93,8 @@ typedef struct _kjscal_dev {
     int rccnt[ABS_MAX + 1];	/* Recalibration per axis down counter */
     int rcmin[ABS_MAX + 1];	/* Recalibration minimum received per axis value */
     int rcmax[ABS_MAX + 1];	/* Recalibration maximum received per axis value */
+
+    int last[ABS_MAX + 1];	/* Last received value */
 } kjscal_dev;
 
 
@@ -96,6 +108,9 @@ static void kjscal_event(struct input_handle *handle, unsigned int type, unsigne
 {
 	kjscal_dev *kjsdev = handle->private;
 
+	/* The absolute value range */
+	int absrange = kjsdev->vdev.absmax[code] - kjsdev->vdev.absmin[code];
+
 	/* Event translation */
 	if (type == EV_ABS) {
 		if (!kjsdev->rset[code]) {
@@ -108,6 +123,13 @@ static void kjscal_event(struct input_handle *handle, unsigned int type, unsigne
 			if (kjsdev->rmin[code] == 0) {
 				kjsdev->rmin[code] = value;
 			} else {
+				/* Skip protection */
+				if ((noskip > 0) && (skiprange < absrange)) {
+					if (labs((long)value -(long)(kjsdev->rmin[code])) * (long)noskip > (long)absrange)
+						return;
+					kjsdev->last[code] = value;
+				}
+
 				if (kjsdev->rmin[code] < value) {
 					kjsdev->rmax[code] = value;
 					kjsdev->rset[code] = 1;
@@ -118,8 +140,12 @@ static void kjscal_event(struct input_handle *handle, unsigned int type, unsigne
 				}
 			}
 		} else {
-			/* The absolute value range */
-			int absrange = kjsdev->vdev.absmax[code] - kjsdev->vdev.absmin[code];
+			/* Skip protection */
+			if ((noskip > 0) && (skiprange < absrange)) {
+				if (labs((long)value -(long)(kjsdev->last[code])) * (long)noskip > (long)absrange)
+					return;
+				kjsdev->last[code] = value;
+			}
 
 			/* Recalibration support */
 			if (recal > 0) {
@@ -346,6 +372,10 @@ static int __init kjscal_init(void)
 		recal = INT_MAX - 1;
 	if (minrange < 0)
 		minrange = 0;
+	if (noskip < 0)
+		noskip = 0;
+	if (skiprange < 0)
+		skiprange = 0;
 
 	if (verbose > 0)
 		printk("kjscal: Verbose logging enabled\n");
